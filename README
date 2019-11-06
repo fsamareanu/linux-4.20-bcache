@@ -9,3 +9,26 @@ This contains the following:
 
 2. A vanilla 4.20.17 kernel with above patches
 3. A kernel config shamelessly copied from xanmod 4.20.10-xanmod6 (cheers to xanmod for making an awesome kernel)
+
+My SysFS Utils config file below:
+
+#Sequential cutoff makes no sense if seeding
+block/bcache0/bcache/sequential_cutoff = 0
+#Mode is persisted between reboots but it's here just to make sure
+block/bcache0/bcache/cache_mode = writeback
+#We use LRU as cache replacement policy
+block/nvme0n1/nvme0n1p2/bcache/cache_replacement_policy = lru
+#ionice -c2 -n7 so that reads come from spinning disks. For systemd you need to add something like this in .service file under [Service] category:
+#IOSchedulingClass=best-effort
+#IOSchedulingPriority=7
+block/bcache0/bcache/ioprio_bypass = 2,7
+#ionice -c2 -n 0 so we can use writeback as cache_mode for this specific process
+block/bcache0/bcache/ioprio_writeback = 2,0
+#Do not exclude background_io from operations
+devices/virtual/block/md0/bcache/bypass_background_io = 0
+#We prefer keeping cache dirty as we can afford it
+devices/virtual/block/md0/bcache/writeback_percent = 20
+#Disable checks for NVME congestion
+fs/bcache/2d1f3038-0957-422d-8024-8026ed5f839f/congested_read_threshold_us = 0
+fs/bcache/2d1f3038-0957-422d-8024-8026ed5f839f/congested_write_threshold_us = 0
+
