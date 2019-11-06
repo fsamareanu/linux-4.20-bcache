@@ -2,14 +2,17 @@ This contains the following:
 
 1. Cherry picked bcache patches that either fix some issues or add additional functionality:
 
-01-bypass.patch adds the option to enable/disable cache bypass for readahead/background I/O -> https://gitlab.com/snippets/1820316
-02-journal_replay.patch fixes a journal replay issue -> https://www.spinics.net/lists/linux-bcache/msg07027.html
-03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch fixes a panic when trim is running -> https://patchwork.kernel.org/patch/10773357/
+01-bypass-4.20.patch adds the option to enable/disable cache bypass for readahead/background I/O (Only for kernel 4.20) -> https://gitlab.com/snippets/1820316
+01-bypass-4.19.82.patch same as above but fixed to apply to 4.19.82
+02-journal_replay.patch fixes a journal replay issue (4.20 only) -> https://www.spinics.net/lists/linux-bcache/msg07027.html
+03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch fixes (4.20 only, included in 4.19.82) a panic when trim is running -> https://patchwork.kernel.org/patch/10773357/
 04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch adds caching decisions based on set ioprio (for example when you want 1 program to always cache to bcache but not the rest) -> https://patchwork.kernel.org/patch/9820443/
 
-2. A vanilla 4.20.17 kernel with above patches
-3. A kernel config shamelessly copied from xanmod 4.20.10-xanmod6 (cheers to xanmod for making an awesome kernel)
-4. Prebuilt packages for Debian 9 and Ubuntu 18.04 (be warned, I have only tested the Ubuntu image and it boots)
+2. A vanilla 4.20.17 kernel with patches 01-bypass-4.20.patch , 02-journal_replay.patch , 03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch and 04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch applied.
+3. A vanilla 4.19.82 LTS kernel with patches 01-bypass-4.19.82.patch , 04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch
+4. A kernel config shamelessly copied from xanmod 4.20.10-xanmod6 (cheers to xanmod for making an awesome kernel)
+5. A kernel config shamelessly copied from xanmod 4.19.81-xanmod39
+6. Prebuilt packages for Debian 9 and Ubuntu 18.04 (that you should use at your own risk)
 
 My SysFS Utils config file below:
 

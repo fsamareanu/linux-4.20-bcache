@@ -1,0 +1,72 @@
+--- a/drivers/md/bcache/request.c	2019-11-06 17:27:13.395090099 +0100
++++ b/drivers/md/bcache/request.c	2019-11-06 17:30:36.581019496 +0100
+@@ -395,9 +395,13 @@
+ 	 * unless the read-ahead request is for metadata
+ 	 * (eg, for gfs2 or xfs).
+ 	 */
+-	if (bio->bi_opf & (REQ_RAHEAD|REQ_BACKGROUND) &&
+-	    !(bio->bi_opf & (REQ_META|REQ_PRIO)))
++	if (!(bio->bi_opf & REQ_PRIO))
++	{
++	    if (dc->bypass_readahead_io && (bio->bi_opf & REQ_RAHEAD))
+ 		goto skip;
++	    if (dc->bypass_background_io && (bio->bi_opf & REQ_BACKGROUND))
++		goto skip;
++	}
+ 
+ 	if (bio->bi_iter.bi_sector & (c->sb.block_size - 1) ||
+ 	    bio_sectors(bio) & (c->sb.block_size - 1)) {
+diff --git a/drivers/md/bcache/bcache.h b/drivers/md/bcache/bcache.h
+index fdf75352e16a..5f9d9d59bdb5 100644
+--- a/drivers/md/bcache/bcache.h
++++ b/drivers/md/bcache/bcache.h
+@@ -372,6 +372,9 @@ struct cached_dev {
+ 	unsigned char		writeback_percent;
+ 	unsigned int		writeback_delay;
+ 
++	unsigned int		bypass_readahead_io:1;
++	unsigned int		bypass_background_io:1;
++
+ 	uint64_t		writeback_rate_target;
+ 	int64_t			writeback_rate_proportional;
+ 	int64_t			writeback_rate_integral;
+diff --git a/drivers/md/bcache/sysfs.c b/drivers/md/bcache/sysfs.c
+index 557a8a3270a1..12cbee7f7d89 100644
+--- a/drivers/md/bcache/sysfs.c
++++ b/drivers/md/bcache/sysfs.c
+@@ -123,6 +123,8 @@ rw_attribute(errors);
+ rw_attribute(io_error_limit);
+ rw_attribute(io_error_halflife);
+ rw_attribute(verify);
++rw_attribute(bypass_readahead_io);
++rw_attribute(bypass_background_io);
+ rw_attribute(bypass_torture_test);
+ rw_attribute(key_merging_disabled);
+ rw_attribute(gc_always_rewrite);
+@@ -171,6 +173,8 @@ SHOW(__bch_cached_dev)
+ 
+ 	sysfs_printf(data_csum,		"%i", dc->disk.data_csum);
+ 	var_printf(verify,		"%i");
++	var_printf(bypass_readahead_io,	"%i");
++	var_printf(bypass_background_io,	"%i");
+ 	var_printf(bypass_torture_test,	"%i");
+ 	var_printf(writeback_metadata,	"%i");
+ 	var_printf(writeback_running,	"%i");
+@@ -262,6 +266,8 @@ STORE(__cached_dev)
+ 
+ 	sysfs_strtoul(data_csum,	dc->disk.data_csum);
+ 	d_strtoul(verify);
++	d_strtoul(bypass_readahead_io);
++	d_strtoul(bypass_background_io);
+ 	d_strtoul(bypass_torture_test);
+ 	d_strtoul(writeback_metadata);
+ 	d_strtoul(writeback_running);
+@@ -448,6 +454,8 @@ static struct attribute *bch_cached_dev_files[] = {
+ 	&sysfs_state,
+ 	&sysfs_label,
+ 	&sysfs_readahead,
++	&sysfs_bypass_readahead_io,
++	&sysfs_bypass_background_io,
+ #ifdef CONFIG_BCACHE_DEBUG
+ 	&sysfs_verify,
+ 	&sysfs_bypass_torture_test,
