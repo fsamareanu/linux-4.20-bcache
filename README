@@ -2,10 +2,10 @@ This contains the following:
 
 1. Cherry picked bcache patches that either fix some issues or add additional functionality:
 
-01-bypass.patch adds the option to enable/disable cache bypass for readahead/background I/O
+01-bypass.patch adds the option to enable/disable cache bypass for readahead/background I/O -> https://gitlab.com/snippets/1820316
 02-journal_replay.patch fixes a journal replay issue
 03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch fixes a panic when trim is running
-04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch adds caching decisions based on set ioprio (for example when you want 1 program to always cache to bcache but not the rest)
+04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch adds caching decisions based on set ioprio (for example when you want 1 program to always cache to bcache but not the rest) -> https://patchwork.kernel.org/patch/9820443/
 
 2. A vanilla 4.20.17 kernel with above patches
 3. A kernel config shamelessly copied from xanmod 4.20.10-xanmod6 (cheers to xanmod for making an awesome kernel)
