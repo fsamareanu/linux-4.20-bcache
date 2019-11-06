@@ -1,0 +1,109 @@
+From:       Shenghui Wang <shhuiw () foxmail ! com>
+Date:       2019-01-28 10:18:50
+Message-ID: 20190128101850.9941-1-shhuiw () foxmail ! com
+[Download RAW message or body]
+
+In the CACHE_SYNC branch of run_cache_set(), LIST_HEAD(journal) is used
+to collect journal_replay(s) and filled by bch_journal_read().
+
+If all goes well, bch_journal_replay() will release the list of
+jounal_replay(s) at the end of the branch.
+
+If something goes wrong, code flow will jump to the label "err:" and leave
+the list unreleased.
+
+This patch will release the list of journal_replay(s) in the case of
+error detected.
+
+Signed-off-by: Shenghui Wang <shhuiw@foxmail.com>
+---
+ drivers/md/bcache/super.c | 30 +++++++++++++++++++++++-------
+ 1 file changed, 23 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/md/bcache/super.c b/drivers/md/bcache/super.c
+index 4dee119c3664..f738a1d3b864 100644
+--- a/drivers/md/bcache/super.c
++++ b/drivers/md/bcache/super.c
+@@ -1791,18 +1791,19 @@ static void run_cache_set(struct cache_set *c)
+ 
+ 	if (CACHE_SYNC(&c->sb)) {
+ 		LIST_HEAD(journal);
++		struct journal_replay *l;
+ 		struct bkey *k;
+ 		struct jset *j;
+ 
+ 		err = "cannot allocate memory for journal";
+ 		if (bch_journal_read(c, &journal))
+-			goto err;
++			goto no_replay;
+ 
+ 		pr_debug("btree_journal_read() done");
+ 
+ 		err = "no journal entries found";
+ 		if (list_empty(&journal))
+-			goto err;
++			goto no_replay;
+ 
+ 		j = &list_entry(journal.prev, struct journal_replay, list)->j;
+ 
+@@ -1820,25 +1821,25 @@ static void run_cache_set(struct cache_set *c)
+ 
+ 		err = "bad btree root";
+ 		if (__bch_btree_ptr_invalid(c, k))
+-			goto err;
++			goto no_replay;
+ 
+ 		err = "error reading btree root";
+ 		c->root = bch_btree_node_get(c, NULL, k,
+ 					     j->btree_level,
+ 					     true, NULL);
+ 		if (IS_ERR_OR_NULL(c->root))
+-			goto err;
++			goto no_replay;
+ 
+ 		list_del_init(&c->root->list);
+ 		rw_unlock(true, c->root);
+ 
+ 		err = uuid_read(c, j, &cl);
+ 		if (err)
+-			goto err;
++			goto no_replay;
+ 
+ 		err = "error in recovery";
+ 		if (bch_btree_check(c))
+-			goto err;
++			goto no_replay;
+ 
+ 		bch_journal_mark(c, &journal);
+ 		bch_initial_gc_finish(c);
+@@ -1854,7 +1855,7 @@ static void run_cache_set(struct cache_set *c)
+ 		err = "error starting allocator thread";
+ 		for_each_cache(ca, c, i)
+ 			if (bch_cache_allocator_start(ca))
+-				goto err;
++				goto no_replay;
+ 
+ 		/*
+ 		 * First place it's safe to allocate: btree_check() and
+@@ -1870,6 +1871,21 @@ static void run_cache_set(struct cache_set *c)
+ 			__uuid_write(c);
+ 
+ 		bch_journal_replay(c, &journal);
++
++no_replay:
++		/*
++		 * Only for the err cases as bch_joural_replay can release
++		 * the list of journal_replay(s) and skip "goto err".
++		 */
++		if (!list_empty(&journal)) {
++			while (!list_empty(&journal)) {
++				l = list_first_entry(&journal,
++						struct journal_replay, list);
++				list_del(&l->list);
++				kfree(l);
++			}
++			goto err;
++		}
+ 	} else {
+ 		pr_notice("invalidating existing data");
+ 
