@@ -3,8 +3,8 @@ This contains the following:
 1. Cherry picked bcache patches that either fix some issues or add additional functionality:
 
 01-bypass.patch adds the option to enable/disable cache bypass for readahead/background I/O -> https://gitlab.com/snippets/1820316
-02-journal_replay.patch fixes a journal replay issue
-03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch fixes a panic when trim is running
+02-journal_replay.patch fixes a journal replay issue -> https://www.spinics.net/lists/linux-bcache/msg07027.html
+03-70c214fe7e80f23281ee3549cc2c4ed170b0f7ad.patch fixes a panic when trim is running -> https://patchwork.kernel.org/patch/10773357/
 04-de05533d9d1e458a9d22f65467f8fa3b3e9ffb13.patch adds caching decisions based on set ioprio (for example when you want 1 program to always cache to bcache but not the rest) -> https://patchwork.kernel.org/patch/9820443/
 
 2. A vanilla 4.20.17 kernel with above patches
