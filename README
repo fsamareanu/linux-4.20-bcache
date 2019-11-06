@@ -9,6 +9,7 @@ This contains the following:
 
 2. A vanilla 4.20.17 kernel with above patches
 3. A kernel config shamelessly copied from xanmod 4.20.10-xanmod6 (cheers to xanmod for making an awesome kernel)
+4. Prebuilt packages for Debian 9 and Ubuntu 18.04 (be warned, I have only tested the Ubuntu image and it boots)
 
 My SysFS Utils config file below:
 
