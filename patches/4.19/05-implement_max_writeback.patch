@@ -1,0 +1,69 @@
+--- bcache.h.orig	2019-11-13 07:21:32.492532254 +0100
++++ bcache.h	2019-11-13 07:22:27.010690698 +0100
+@@ -711,6 +711,7 @@
+ 	unsigned int		gc_always_rewrite:1;
+ 	unsigned int		shrinker_disabled:1;
+ 	unsigned int		copy_gc_enabled:1;
++	unsigned int		idle_max_writeback_rate_enabled:1;
+ 
+ #define BUCKET_HASH_BITS	12
+ 	struct hlist_head	bucket_hash[1 << BUCKET_HASH_BITS];
+--- super.c.orig	2019-11-13 07:22:41.446203085 +0100
++++ super.c	2019-11-13 07:23:32.756469883 +0100
+@@ -1743,6 +1743,7 @@
+ 	c->congested_read_threshold_us	= 2000;
+ 	c->congested_write_threshold_us	= 20000;
+ 	c->error_limit	= DEFAULT_IO_ERROR_LIMIT;
++	c->idle_max_writeback_rate_enabled = 1;
+ 	WARN_ON(test_and_clear_bit(CACHE_SET_IO_DISABLE, &c->flags));
+ 
+ 	return c;
+--- sysfs.c.orig	2019-11-13 07:24:08.849250705 +0100
++++ sysfs.c	2019-11-13 07:28:14.426955282 +0100
+@@ -130,6 +130,7 @@
+ rw_attribute(cache_replacement_policy);
+ rw_attribute(btree_shrinker_disabled);
+ rw_attribute(copy_gc_enabled);
++rw_attribute(idle_max_writeback_rate);
+ rw_attribute(size);
+ 
+ rw_attribute(ioprio_writeback);
+@@ -768,6 +769,8 @@
+ 	sysfs_printf(gc_always_rewrite,		"%i", c->gc_always_rewrite);
+ 	sysfs_printf(btree_shrinker_disabled,	"%i", c->shrinker_disabled);
+ 	sysfs_printf(copy_gc_enabled,		"%i", c->copy_gc_enabled);
++	sysfs_printf(idle_max_writeback_rate,	"%i",
++		     c->idle_max_writeback_rate_enabled);
+ 	sysfs_printf(io_disable,		"%i",
+ 		     test_bit(CACHE_SET_IO_DISABLE, &c->flags));
+ 
+@@ -888,6 +891,8 @@
+ 	sysfs_strtoul(key_merging_disabled,	c->key_merging_disabled);
+ 	sysfs_strtoul(expensive_debug_checks,	c->expensive_debug_checks);
+ 	sysfs_strtoul(gc_always_rewrite,	c->gc_always_rewrite);
++	sysfs_strtoul(idle_max_writeback_rate,
++		      c->idle_max_writeback_rate_enabled);
+ 	sysfs_strtoul(btree_shrinker_disabled,	c->shrinker_disabled);
+ 	sysfs_strtoul(copy_gc_enabled,		c->copy_gc_enabled);
+ 
+@@ -970,6 +975,7 @@
+ 	&sysfs_gc_always_rewrite,
+ 	&sysfs_btree_shrinker_disabled,
+ 	&sysfs_copy_gc_enabled,
++	&sysfs_idle_max_writeback_rate,
+ 	&sysfs_io_disable,
+ 	NULL
+ };
+--- writeback.c.orig	2019-11-13 07:28:37.580173181 +0100
++++ writeback.c	2019-11-13 07:29:35.090223404 +0100
+@@ -113,6 +113,10 @@
+ static bool set_at_max_writeback_rate(struct cache_set *c,
+ 				       struct cached_dev *dc)
+ {
++	/* Don't sst max writeback rate if it is disabled */
++	if (!c->idle_max_writeback_rate_enabled)
++		return false;
++
+ 	/*
+ 	 * Idle_counter is increased everytime when update_writeback_rate() is
+ 	 * called. If all backing devices attached to the same cache set have
